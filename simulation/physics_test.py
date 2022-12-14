@@ -1,7 +1,7 @@
 import unittest
 import torch
 
-from .physics import RigidBody
+from .physics import Kart
 
 
 class TorchAssertions:
@@ -22,22 +22,22 @@ class TestApply(unittest.TestCase, TorchAssertions):
         position = torch.zeros((5, 2))
         velocity = torch.tensor((1.0, 2.0, 3.0, 4.0, 5.0))
         rotation = torch.tensor((0.0, 0.25, 0.5, 0.75, 1.0)) * torch.pi
-        rb = RigidBody(position, velocity, rotation)
+        kart = Kart(position, velocity, rotation)
 
         command = torch.zeros((5, 3))
         dt = 1.0
-        rb.update(command, dt)
+        kart.update(command, dt)
 
         # check direction is correct
         self.assertTorchAlmostEqual(
             torch.stack((rotation.cos(), rotation.sin()), dim=1),
-            rb.position() / rb.position().norm(dim=1).unsqueeze(1)
+            kart.position() / kart.position().norm(dim=1).unsqueeze(1)
         )
 
         # check magnitude is correct
         self.assertTorchAlmostEqual(
             velocity * dt,
-            rb.position().norm(dim=1),
+            kart.position().norm(dim=1),
             1.0e-6
         )
 
@@ -45,19 +45,19 @@ class TestApply(unittest.TestCase, TorchAssertions):
         position = torch.zeros((5, 2))
         velocity = torch.tensor((-1.0, 0.0, 1.0, 2.0, 3.0))
         rotation = torch.zeros(5)
-        rb = RigidBody(position, velocity, rotation)
+        kart = Kart(position, velocity, rotation)
 
         command = torch.zeros((5, 3))
         dt = 1.0
-        rb.update(command, dt)
+        kart.update(command, dt)
 
-        self.assertTorchAlmostEqual(velocity, rb.velocity())
+        self.assertTorchAlmostEqual(velocity, kart.velocity())
 
     def test_acceleration(self):
         position = torch.zeros((5, 2))
         velocity = torch.zeros(5)
         rotation = torch.zeros(5)
-        rb = RigidBody(position, velocity, rotation)
+        kart = Kart(position, velocity, rotation)
 
         command = torch.tensor((
             (0.0, 0.0, 0.0),
@@ -66,38 +66,38 @@ class TestApply(unittest.TestCase, TorchAssertions):
             (0.75, 0.0, 0.0),
             (1.0, 0.0, 0.0)
         ))
-        dt = rb.time_to_max_speed
-        rb.update(command, dt)
+        dt = kart.time_to_max_speed
+        kart.update(command, dt)
 
         # test speed
-        self.assertTorchAlmostEqual(command[:, 0] * rb.max_speed, rb.velocity())
+        self.assertTorchAlmostEqual(command[:, 0] * kart.max_speed, kart.velocity())
 
         # test max
-        rb.update(command, dt)
-        self.assertTrue((rb.velocity() <= rb.max_speed).all())
+        kart.update(command, dt)
+        self.assertTrue((kart.velocity() <= kart.max_speed).all())
 
     def test_brake(self):
         position = torch.zeros((5, 2))
         velocity = torch.zeros(5)
         rotation = torch.zeros(5)
-        rb = RigidBody(position, velocity, rotation)
+        kart = Kart(position, velocity, rotation)
 
         command = torch.tensor((0.0, 1.0, 0.0)).repeat((5, 1))
-        dt = 0.5 * rb.time_to_max_speed
-        rb.update(command, dt)
+        dt = 0.5 * kart.time_to_max_speed
+        kart.update(command, dt)
 
         # test speed
-        self.assertTorchAlmostEqual(rb.min_speed, rb.velocity())
+        self.assertTorchAlmostEqual(kart.min_speed, kart.velocity())
 
         # test max
-        rb.update(command, dt)
-        self.assertTrue((rb.velocity() >= rb.min_speed).all())
+        kart.update(command, dt)
+        self.assertTrue((kart.velocity() >= kart.min_speed).all())
 
     def test_steer(self):
         position = torch.zeros((3, 2))
         velocity = torch.tensor((0.0, 5.0, 25.0))
         rotation = torch.zeros(3)
-        rb = RigidBody(position, velocity, rotation)
+        kart = Kart(position, velocity, rotation)
 
         command = torch.tensor((
             (0.0, 0.0, 0.0),
@@ -105,23 +105,23 @@ class TestApply(unittest.TestCase, TorchAssertions):
             (0.0, 0.0, 0.0),
         ))
         dt = 1.0
-        rb.update(command, dt)
+        kart.update(command, dt)
 
-        self.assertTorchAlmostEqual(velocity, rb.velocity())
-        self.assertTorchAlmostEqual(rotation, rb.rotation())
+        self.assertTorchAlmostEqual(velocity, kart.velocity())
+        self.assertTorchAlmostEqual(rotation, kart.rotation())
 
         command = torch.tensor((
             (0.0, 0.0, 1.0),
             (0.0, 0.0, 1.0),
             (0.0, 0.0, 1.0),
         ))
-        rb.update(command, dt)
+        kart.update(command, dt)
 
-        rot = rb.rotation()
-        self.assertAlmostEqual(rb.rotation()[0], 0.0)
-        self.assertTrue(rb.rotation()[1] > 0.0)
-        self.assertTrue(rb.rotation()[2] > 0.0)
-        self.assertTrue(rb.rotation()[1] / velocity[1] > rb.rotation()[2] / velocity[2])
+        rot = kart.rotation()
+        self.assertAlmostEqual(kart.rotation()[0], 0.0)
+        self.assertTrue(kart.rotation()[1] > 0.0)
+        self.assertTrue(kart.rotation()[2] > 0.0)
+        self.assertTrue(kart.rotation()[1] / velocity[1] > kart.rotation()[2] / velocity[2])
 
         command = torch.tensor((
             (0.0, 0.0, -1.0),
@@ -129,38 +129,38 @@ class TestApply(unittest.TestCase, TorchAssertions):
             (0.0, 0.0, -1.0),
         ))
         dt = 2.0
-        rb.update(command, dt)
+        kart.update(command, dt)
 
-        self.assertAlmostEqual(rb.rotation()[0], 0.0)
-        self.assertTrue(rb.rotation()[1] < 0.0)
-        self.assertTrue(rb.rotation()[2] < 0.0)
-        self.assertTrue(rb.rotation()[1] / velocity[1] < rb.rotation()[2] / velocity[2])
+        self.assertAlmostEqual(kart.rotation()[0], 0.0)
+        self.assertTrue(kart.rotation()[1] < 0.0)
+        self.assertTrue(kart.rotation()[2] < 0.0)
+        self.assertTrue(kart.rotation()[1] / velocity[1] < kart.rotation()[2] / velocity[2])
 
     def test_back_up(self):
         position = torch.zeros((2, 2))
         velocity = torch.tensor((-5.0, -12.5))
         rotation = torch.zeros(2)
-        rb = RigidBody(position, velocity, rotation)
+        kart = Kart(position, velocity, rotation)
 
         command = torch.tensor((
             (0.0, 0.0, 1.0),
             (0.0, 0.0, 1.0),
         ))
         dt = 1.0
-        rb.update(command, dt)
+        kart.update(command, dt)
 
-        self.assertTrue(rb.rotation()[0] < 0.0)
-        self.assertTrue(rb.rotation()[1] < 0.0)
+        self.assertTrue(kart.rotation()[0] < 0.0)
+        self.assertTrue(kart.rotation()[1] < 0.0)
 
         command = torch.tensor((
             (0.0, 0.0, -1.0),
             (0.0, 0.0, -1.0),
         ))
         dt = 2.0
-        rb.update(command, dt)
+        kart.update(command, dt)
 
-        self.assertTrue(rb.rotation()[0] > 0.0)
-        self.assertTrue(rb.rotation()[1] > 0.0)
+        self.assertTrue(kart.rotation()[0] > 0.0)
+        self.assertTrue(kart.rotation()[1] > 0.0)
 
 
 if __name__ == '__main__':

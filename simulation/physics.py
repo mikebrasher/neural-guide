@@ -1,7 +1,7 @@
 import torch
 
 
-class RigidBody:
+class Kart:
     def __init__(
             self,
             position: torch.Tensor,  # batch_size x 2
