@@ -1,6 +1,36 @@
 import torch
 
 
+class Puck:
+    def __init__(
+            self,
+            position: torch.Tensor,  # batch_size x 2
+            velocity: torch.Tensor,  # batch_size x 1
+            rotation: torch.Tensor,  # batch_size x 1
+    ):
+        self.state = torch.cat((
+            position,
+            velocity.unsqueeze(1),
+            rotation.unsqueeze(1)
+        ), dim=1)
+
+    def position(self) -> torch.Tensor:
+        return self.state[:, :2]
+
+    def velocity(self) -> torch.Tensor:
+        return self.state[:, 2]
+
+    def rotation(self) -> torch.Tensor:
+        return self.state[:, 3]
+
+    def update(self, dt):
+        velocity = self.state[:, 2]
+        sigma = self.state[:, 3]
+
+        self.state[:, 0] += velocity * sigma.cos() * dt
+        self.state[:, 1] += velocity * sigma.sin() * dt
+
+
 class Kart:
     def __init__(
             self,

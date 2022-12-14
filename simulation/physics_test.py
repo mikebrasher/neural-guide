@@ -1,7 +1,7 @@
 import unittest
 import torch
 
-from .physics import Kart
+from .physics import Puck, Kart
 
 
 class TorchAssertions:
@@ -17,7 +17,32 @@ class TorchAssertions:
             raise AssertionError('expected {}\nfound {}'.format(first, second))
 
 
-class TestApply(unittest.TestCase, TorchAssertions):
+class TestPuck(unittest.TestCase, TorchAssertions):
+    def test_position(self):
+        position = torch.zeros((5, 2))
+        velocity = torch.tensor((1.0, 2.0, 3.0, 4.0, 5.0))
+        rotation = torch.tensor((0.0, 0.25, 0.5, 0.75, 1.0)) * torch.pi
+        puck = Puck(position, velocity, rotation)
+
+        command = torch.zeros((5, 3))
+        dt = 1.0
+        puck.update(dt)
+
+        # check direction is correct
+        self.assertTorchAlmostEqual(
+            torch.stack((rotation.cos(), rotation.sin()), dim=1),
+            puck.position() / puck.position().norm(dim=1).unsqueeze(1)
+        )
+
+        # check magnitude is correct
+        self.assertTorchAlmostEqual(
+            velocity * dt,
+            puck.position().norm(dim=1),
+            1.0e-6
+        )
+
+
+class TestKart(unittest.TestCase, TorchAssertions):
     def test_position(self):
         position = torch.zeros((5, 2))
         velocity = torch.tensor((1.0, 2.0, 3.0, 4.0, 5.0))
